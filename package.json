@@ -8,8 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fixtures": "node -e \"require('fs').copyFileSync('../Calendar/app/build/conformance/conformance.json','src/core/__fixtures__/conformance.json')\""
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
