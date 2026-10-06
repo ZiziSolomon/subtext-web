@@ -29,3 +29,40 @@ body {
 .placeholder p {
   color: var(--muted);
 }
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--muted);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.error {
+  color: #d32f2f;
+}
+
+.calendars {
+  list-style: none;
+  padding: 0;
+}
+
+.calendars li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.role {
+  color: var(--muted);
+  font-size: 0.85em;
+}
