@@ -49,9 +49,13 @@ export interface AccessToken {
 }
 
 /**
- * Opens Google's consent popup (or reuses the grant silently) and resolves with an access
- * token. Tokens last about an hour; there's no refresh token in the browser model, so callers
- * ask again when it expires. Must be called from a click, or browsers block the popup.
+ * Opens Google's popup and resolves with an access token. Tokens last about an hour; there's no
+ * refresh token in the browser model, so callers ask again when one expires. Must be called from
+ * a click, or browsers block the popup.
+ *
+ * With no [loginHint], Google shows its account chooser (otherwise it silently reuses whichever
+ * account the browser is signed into, so a second account could never be added). With one, it
+ * renews that account, without asking if the grant still stands.
  */
 export async function requestAccessToken(loginHint?: string): Promise<AccessToken> {
   await loadIdentityScript()
@@ -73,6 +77,6 @@ export async function requestAccessToken(loginHint?: string): Promise<AccessToke
       },
       error_callback: (error) => reject(new Error(error.message ?? error.type)),
     })
-    client.requestAccessToken({ login_hint: loginHint })
+    client.requestAccessToken(loginHint ? { login_hint: loginHint, prompt: '' } : { prompt: 'select_account' })
   })
 }

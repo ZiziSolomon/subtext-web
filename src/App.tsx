@@ -5,6 +5,7 @@ import { formatTitle, step, today, visibleRange, zone, type ViewKind } from './a
 import { demoRules } from './app/demo'
 import { EventDetails } from './app/EventDetails'
 import { useStored } from './app/storage'
+import type { AccountCalendar } from './app/accounts'
 import { isDemo, useCalendarData } from './app/useCalendarData'
 import { MonthGrid } from './app/views/MonthGrid'
 import { TimeGrid } from './app/views/TimeGrid'
@@ -73,7 +74,7 @@ export default function App() {
       <main className="welcome">
         <h1>Subtext</h1>
         <p>Your Google calendar, with routine context kept in the background.</p>
-        <button className="primary" onClick={data.signIn}>
+        <button className="primary" onClick={data.addAccount}>
           Sign in with Google
         </button>
         {data.error && <p className="error">{data.error}</p>}
@@ -103,7 +104,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        {isDemo ? <span className="badge">Demo data</span> : <button onClick={data.signOut}>Sign out</button>}
+        {isDemo && <span className="badge">Demo data</span>}
       </header>
 
       <aside className="sidebar">
@@ -121,19 +122,37 @@ export default function App() {
             ))}
           </ul>
         </section>
-        <section>
-          <h3>Calendars</h3>
-          <ul className="calendar-list">
-            {data.calendars.map((calendar) => (
-              <li key={calendar.id}>
-                <label>
-                  <input type="checkbox" checked={!data.hiddenCalendars.includes(calendar.id)} onChange={() => data.toggleCalendar(calendar.id)} style={{ accentColor: calendar.backgroundColor }} />
-                  {calendar.summaryOverride ?? calendar.summary}
-                </label>
-              </li>
+        {isDemo ? (
+          <section>
+            <h3>Calendars</h3>
+            <CalendarList calendars={data.calendars} hidden={data.hiddenCalendars} onToggle={data.toggleCalendar} />
+          </section>
+        ) : (
+          <>
+            {data.accounts.map((account) => (
+              <section key={account.email} className="account">
+                <h3 title={account.email}>{account.email}</h3>
+                <CalendarList calendars={data.calendars.filter((c) => c.account === account.email)} hidden={data.hiddenCalendars} onToggle={data.toggleCalendar} />
+                <button className="link" onClick={() => data.removeAccount(account.email)}>
+                  Remove this account
+                </button>
+              </section>
             ))}
-          </ul>
-        </section>
+            {data.expired.map((email) => (
+              <section key={email} className="account is-expired">
+                <h3 title={email}>{email}</h3>
+                <p className="muted small">Signed out after an hour, as Google requires.</p>
+                <button onClick={() => data.renewAccount(email)}>Sign in again</button>
+                <button className="link" onClick={() => data.removeAccount(email)}>
+                  Remove
+                </button>
+              </section>
+            ))}
+            <button className="add-account" onClick={data.addAccount}>
+              + Add another Google account
+            </button>
+          </>
+        )}
         {data.error && <p className="error small">{data.error}</p>}
       </aside>
 
@@ -158,5 +177,20 @@ export default function App() {
 
       {opened && <EventDetails event={opened} contextual={contextById.has(opened.id)} evaluator={evaluator} onClose={() => setOpened(null)} />}
     </div>
+  )
+}
+
+function CalendarList({ calendars, hidden, onToggle }: { calendars: AccountCalendar[]; hidden: string[]; onToggle: (id: string) => void }) {
+  return (
+    <ul className="calendar-list">
+      {calendars.map((calendar) => (
+        <li key={calendar.id}>
+          <label>
+            <input type="checkbox" checked={!hidden.includes(calendar.id)} onChange={() => onToggle(calendar.id)} style={{ accentColor: calendar.backgroundColor }} />
+            {calendar.summaryOverride ?? calendar.summary}
+          </label>
+        </li>
+      ))}
+    </ul>
   )
 }

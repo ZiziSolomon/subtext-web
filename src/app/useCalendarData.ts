@@ -1,49 +1,56 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { requestAccessToken, type AccessToken } from '../google/auth'
+import { requestAccessToken } from '../google/auth'
 import { listCalendars, type CalendarListEntry } from '../google/calendarApi'
 import { listEvents, SignedOutError, type AppEvent } from '../google/events'
+import { mergeCalendars, primaryEmail, type Account, type AccountCalendar } from './accounts'
 import { rangeToInstants, type VisibleRange } from './dates'
 import { demoCalendars, demoEvents } from './demo'
-import { useStored } from './storage'
+import { readStored, useStored, writeStored } from './storage'
 
 export const isDemo = new URLSearchParams(location.search).has('demo')
 
-const TOKEN_KEY = 'subtext.token'
+// tokens survive a reload for their hour, in this tab only; which accounts are in survives longer
+const TOKENS_KEY = 'subtext.tokens'
+const ACCOUNTS_KEY = 'subtext.accounts'
 
-// the token survives a reload for its hour, in this tab only
-function storedToken(): AccessToken | null {
+function loadTokens(): Account[] {
   try {
-    const token = JSON.parse(sessionStorage.getItem(TOKEN_KEY) ?? 'null') as AccessToken | null
-    return token && token.expiresAt > Date.now() + 60_000 ? token : null
+    const all = JSON.parse(sessionStorage.getItem(TOKENS_KEY) ?? '[]') as Account[]
+    return all.filter((a) => a.token.expiresAt > Date.now() + 60_000)
   } catch {
-    return null
+    return []
   }
 }
 
-function storeToken(token: AccessToken | null) {
+function saveTokens(accounts: Account[]) {
   try {
-    if (token) sessionStorage.setItem(TOKEN_KEY, JSON.stringify(token))
-    else sessionStorage.removeItem(TOKEN_KEY)
+    sessionStorage.setItem(TOKENS_KEY, JSON.stringify(accounts))
   } catch {
     // storage blocked: sign in again after a reload
   }
 }
 
 export interface CalendarData {
-  signedIn: boolean
-  signIn: () => Promise<void>
-  signOut: () => void
-  calendars: CalendarListEntry[]
+  /** Accounts with a working token. */
+  accounts: Account[]
+  /** Accounts added before whose token has expired: one click renews each. */
+  expired: string[]
+  addAccount: () => Promise<void>
+  renewAccount: (email: string) => Promise<void>
+  removeAccount: (email: string) => void
+  calendars: AccountCalendar[]
   hiddenCalendars: string[]
   toggleCalendar: (id: string) => void
   events: AppEvent[]
   loading: boolean
   error: string | null
+  signedIn: boolean
 }
 
 export function useCalendarData(range: VisibleRange): CalendarData {
-  const [token, setToken] = useState<AccessToken | null>(() => (isDemo ? null : storedToken()))
-  const [calendars, setCalendars] = useState<CalendarListEntry[]>(isDemo ? demoCalendars : [])
+  const [accounts, setAccounts] = useState<Account[]>(() => (isDemo ? [] : loadTokens()))
+  const [known, setKnown] = useState<string[]>(() => readStored<string[]>(ACCOUNTS_KEY, []))
+  const [listsByAccount, setListsByAccount] = useState<Record<string, CalendarListEntry[]>>({})
   const [hiddenCalendars, setHiddenCalendars] = useStored<string[]>('subtext.hiddenCalendars', [])
   const [events, setEvents] = useState<AppEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -51,31 +58,52 @@ export function useCalendarData(range: VisibleRange): CalendarData {
   // events per calendar and range, so switching views or weeks back and forth doesn't refetch
   const cache = useRef(new Map<string, AppEvent[]>())
 
-  const signOut = useCallback(() => {
-    storeToken(null)
-    setToken(null)
-    setCalendars([])
-    setEvents([])
-    cache.current.clear()
+  useEffect(() => saveTokens(accounts), [accounts])
+  useEffect(() => writeStored(ACCOUNTS_KEY, known), [known])
+
+  const dropToken = useCallback((email: string) => {
+    setAccounts((all) => all.filter((a) => a.email !== email))
+    for (const key of [...cache.current.keys()]) if (key.startsWith(`${email}|`)) cache.current.delete(key)
   }, [])
 
-  const signIn = useCallback(async () => {
+  const signInAs = useCallback(async (loginHint?: string) => {
     setError(null)
     try {
-      const fresh = await requestAccessToken()
-      storeToken(fresh)
-      setToken(fresh)
+      const token = await requestAccessToken(loginHint)
+      const calendars = await listCalendars(token)
+      const email = primaryEmail(calendars) ?? loginHint ?? 'unknown'
+      setListsByAccount((lists) => ({ ...lists, [email]: calendars }))
+      setAccounts((all) => [...all.filter((a) => a.email !== email), { email, token }])
+      setKnown((all) => (all.includes(email) ? all : [...all, email]))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }, [])
 
+  const removeAccount = useCallback(
+    (email: string) => {
+      dropToken(email)
+      setKnown((all) => all.filter((e) => e !== email))
+      setListsByAccount(({ [email]: _, ...rest }) => rest)
+    },
+    [dropToken],
+  )
+
+  // calendar lists for accounts restored from this tab's session
   useEffect(() => {
-    if (!token) return
-    listCalendars(token)
-      .then(setCalendars)
-      .catch((e) => (e instanceof SignedOutError ? signOut() : setError(String(e))))
-  }, [token, signOut])
+    for (const account of accounts) {
+      if (listsByAccount[account.email]) continue
+      listCalendars(account.token)
+        .then((calendars) => setListsByAccount((lists) => ({ ...lists, [account.email]: calendars })))
+        .catch((e) => (e instanceof SignedOutError ? dropToken(account.email) : setError(String(e))))
+    }
+  }, [accounts, listsByAccount, dropToken])
+
+  const calendars = useMemo<AccountCalendar[]>(() => {
+    if (isDemo) return demoCalendars.map((c) => ({ ...c, account: 'demo' }))
+    // keep the order accounts were added in
+    return mergeCalendars(known.filter((email) => listsByAccount[email]).map((email) => ({ account: email, calendars: listsByAccount[email] })))
+  }, [known, listsByAccount])
 
   const visible = useMemo(() => calendars.filter((c) => !hiddenCalendars.includes(c.id)), [calendars, hiddenCalendars])
   const rangeKey = `${range.firstDay}+${range.days}`
@@ -85,19 +113,28 @@ export function useCalendarData(range: VisibleRange): CalendarData {
       setEvents(demoEvents().filter((e) => visible.some((c) => c.id === e.calendarId)))
       return
     }
-    if (!token) return
 
     let cancelled = false
     const { from, to } = rangeToInstants(range)
+    const readable = visible.filter((c) => accounts.some((a) => a.email === c.account))
     setLoading(true)
     Promise.all(
-      visible.map(async (calendar) => {
-        const key = `${calendar.id}|${rangeKey}`
+      readable.map(async (calendar) => {
+        const key = `${calendar.account}|${calendar.id}|${rangeKey}`
         const cached = cache.current.get(key)
         if (cached) return cached
-        const fetched = await listEvents(token, calendar, from, to)
-        cache.current.set(key, fetched)
-        return fetched
+        const token = accounts.find((a) => a.email === calendar.account)!.token
+        try {
+          const fetched = await listEvents(token, calendar, from, to)
+          cache.current.set(key, fetched)
+          return fetched
+        } catch (e) {
+          if (e instanceof SignedOutError) {
+            dropToken(calendar.account)
+            return []
+          }
+          throw e
+        }
       }),
     )
       .then((perCalendar) => {
@@ -106,23 +143,34 @@ export function useCalendarData(range: VisibleRange): CalendarData {
           setError(null)
         }
       })
-      .catch((e) => {
-        if (cancelled) return
-        if (e instanceof SignedOutError) signOut()
-        else setError(e instanceof Error ? e.message : String(e))
-      })
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
     // range is captured through rangeKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, visible, rangeKey, signOut])
+  }, [accounts, visible, rangeKey, dropToken])
 
   const toggleCalendar = useCallback(
     (id: string) => setHiddenCalendars(hiddenCalendars.includes(id) ? hiddenCalendars.filter((h) => h !== id) : [...hiddenCalendars, id]),
     [hiddenCalendars, setHiddenCalendars],
   )
 
-  return { signedIn: isDemo || token !== null, signIn, signOut, calendars, hiddenCalendars, toggleCalendar, events, loading, error }
+  const expired = known.filter((email) => !accounts.some((a) => a.email === email))
+
+  return {
+    accounts,
+    expired,
+    addAccount: () => signInAs(),
+    renewAccount: (email) => signInAs(email),
+    removeAccount,
+    calendars,
+    hiddenCalendars,
+    toggleCalendar,
+    events,
+    loading,
+    error,
+    signedIn: isDemo || accounts.length > 0 || known.length > 0,
+  }
 }

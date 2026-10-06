@@ -556,3 +556,35 @@ a {
   gap: 1rem;
   margin-top: 1rem;
 }
+
+/* --- accounts in the sidebar --- */
+
+.account h3 {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account {
+  margin-bottom: 0.8rem;
+}
+
+.account.is-expired h3 {
+  color: var(--muted);
+}
+
+button.link {
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.add-account {
+  width: 100%;
+  margin-top: 0.4rem;
+}
