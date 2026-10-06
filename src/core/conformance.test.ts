@@ -4,6 +4,7 @@ import fixture from './__fixtures__/conformance.json'
 import { RuleEvaluator } from './evaluator'
 import { assignColorSlot, assignLanes, barHasEnded, keyEntries, lanesForColumns, monthBars } from './layout'
 import { regexPortabilityProblem } from './regexPortability'
+import { decodeSharedRule, encodeSharedRule, isReadOnly } from './sharedRule'
 import { regexRisk } from './regexRisk'
 import { buildStripes } from './stripes'
 import type { CalEvent, EvaluatedEvent, MatchType, Rule } from './types'
@@ -95,6 +96,25 @@ describe('conformance with the phone', () => {
   it.each(fixture.containsMatch.cases)('matches "$pattern" (title contains) against the same titles', ({ pattern, matches }) => {
     const single = new RuleEvaluator([{ type: 'title_contains', pattern, enabled: true }])
     expect(fixture.containsMatch.titles.map((title) => single.isContextual(titleOnly(title)))).toEqual(matches)
+  })
+})
+
+describe('the shared rule format, read the same on both sides', () => {
+  it.each(fixture.sharedRules)('$input', ({ input, decoded, reencoded }) => {
+    const rule = decodeSharedRule(input)
+    if (decoded === null) {
+      expect(rule).toBeNull()
+      return
+    }
+    expect(rule).not.toBeNull()
+    expect({
+      version: rule!.version, uuid: rule!.uuid, updated: rule!.updated, enabled: rule!.enabled,
+      type: rule!.type, pattern: rule!.pattern, calendarId: rule!.calendar?.id ?? null, calendarName: rule!.calendar?.name ?? null,
+      eventCalendarId: rule!.event?.calendarId ?? null, eventId: rule!.event?.eventId ?? null, eventTitle: rule!.event?.title ?? null,
+      keyName: rule!.keyName ?? null, keyColor: rule!.keyColor ?? null, readOnly: isReadOnly(rule!), extra: Object.keys(rule!.extra).sort(),
+    }).toEqual(decoded)
+    // what each side writes back means the same (byte order of keys may differ)
+    expect(JSON.parse(encodeSharedRule(rule!))).toEqual(JSON.parse(reencoded!))
   })
 })
 

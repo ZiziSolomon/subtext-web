@@ -1575,5 +1575,171 @@
         ]
       }
     ]
-  }
+  },
+  "sharedRules": [
+    {
+      "input": "{\"v\":1,\"uuid\":\"r1\",\"updated\":\"2026-10-06T10:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"title_contains\",\"pattern\":\"on call\"},\"calendar\":{\"id\":\"work@group.calendar.google.com\",\"name\":\"Work\"},\"key\":{\"name\":\"On call\",\"color\":\"#E53935\"}}",
+      "decoded": {
+        "version": 1,
+        "uuid": "r1",
+        "updated": "2026-10-06T10:00:00Z",
+        "enabled": true,
+        "type": "title_contains",
+        "pattern": "on call",
+        "calendarId": "work@group.calendar.google.com",
+        "calendarName": "Work",
+        "eventCalendarId": null,
+        "eventId": null,
+        "eventTitle": null,
+        "keyName": "On call",
+        "keyColor": -1754827,
+        "readOnly": false,
+        "extra": []
+      },
+      "reencoded": "{\"v\":1,\"uuid\":\"r1\",\"updated\":\"2026-10-06T10:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"title_contains\",\"pattern\":\"on call\"},\"calendar\":{\"id\":\"work@group.calendar.google.com\",\"name\":\"Work\"},\"key\":{\"name\":\"On call\",\"color\":\"#e53935\"}}"
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r2\",\"match\":{\"type\":\"all\",\"pattern\":\"\"}}",
+      "decoded": {
+        "version": 1,
+        "uuid": "r2",
+        "updated": "1970-01-01T00:00:00Z",
+        "enabled": true,
+        "type": "all",
+        "pattern": "",
+        "calendarId": null,
+        "calendarName": null,
+        "eventCalendarId": null,
+        "eventId": null,
+        "eventTitle": null,
+        "keyName": null,
+        "keyColor": null,
+        "readOnly": false,
+        "extra": []
+      },
+      "reencoded": "{\"v\":1,\"uuid\":\"r2\",\"updated\":\"1970-01-01T00:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"all\",\"pattern\":\"\"}}"
+    },
+    {
+      "input": "{\"v\":2,\"uuid\":\"r3\",\"updated\":\"2027-01-01T00:00:00Z\",\"match\":{\"type\":\"title_regex\",\"pattern\":\"^Kids\\\\b\"},\"future\":{\"x\":[1,2]},\"note\":\"from a newer app\"}",
+      "decoded": {
+        "version": 2,
+        "uuid": "r3",
+        "updated": "2027-01-01T00:00:00Z",
+        "enabled": true,
+        "type": "title_regex",
+        "pattern": "^Kids\\b",
+        "calendarId": null,
+        "calendarName": null,
+        "eventCalendarId": null,
+        "eventId": null,
+        "eventTitle": null,
+        "keyName": null,
+        "keyColor": null,
+        "readOnly": true,
+        "extra": [
+          "future",
+          "note"
+        ]
+      },
+      "reencoded": "{\"v\":2,\"uuid\":\"r3\",\"updated\":\"2027-01-01T00:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"title_regex\",\"pattern\":\"^Kids\\\\b\"},\"future\":{\"x\":[1,2]},\"note\":\"from a newer app\"}"
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r4\",\"match\":{\"type\":\"event\",\"pattern\":\"\"},\"event\":{\"calendarId\":\"me@gmail.com\",\"eventId\":\"abc123\",\"title\":\"Dentist\"}}",
+      "decoded": {
+        "version": 1,
+        "uuid": "r4",
+        "updated": "1970-01-01T00:00:00Z",
+        "enabled": true,
+        "type": "event",
+        "pattern": "",
+        "calendarId": null,
+        "calendarName": null,
+        "eventCalendarId": "me@gmail.com",
+        "eventId": "abc123",
+        "eventTitle": "Dentist",
+        "keyName": null,
+        "keyColor": null,
+        "readOnly": false,
+        "extra": []
+      },
+      "reencoded": "{\"v\":1,\"uuid\":\"r4\",\"updated\":\"1970-01-01T00:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"event\",\"pattern\":\"\"},\"event\":{\"calendarId\":\"me@gmail.com\",\"eventId\":\"abc123\",\"title\":\"Dentist\"}}"
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r5\",\"match\":{\"type\":\"event\",\"pattern\":\"\"}}",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r6\",\"enabled\":false,\"match\":{\"type\":\"duration_over\",\"pattern\":\"2880\"},\"key\":{\"color\":\"#zzz\"}}",
+      "decoded": {
+        "version": 1,
+        "uuid": "r6",
+        "updated": "1970-01-01T00:00:00Z",
+        "enabled": false,
+        "type": "duration_over",
+        "pattern": "2880",
+        "calendarId": null,
+        "calendarName": null,
+        "eventCalendarId": null,
+        "eventId": null,
+        "eventTitle": null,
+        "keyName": null,
+        "keyColor": null,
+        "readOnly": false,
+        "extra": []
+      },
+      "reencoded": "{\"v\":1,\"uuid\":\"r6\",\"updated\":\"1970-01-01T00:00:00Z\",\"enabled\":false,\"match\":{\"type\":\"duration_over\",\"pattern\":\"2880\"}}"
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r7\",\"match\":{\"type\":\"title_contains\",\"pattern\":\"Café\"},\"calendar\":{\"name\":\"no id\"},\"key\":{\"name\":\"Café ☕\"}}",
+      "decoded": {
+        "version": 1,
+        "uuid": "r7",
+        "updated": "1970-01-01T00:00:00Z",
+        "enabled": true,
+        "type": "title_contains",
+        "pattern": "Café",
+        "calendarId": null,
+        "calendarName": null,
+        "eventCalendarId": null,
+        "eventId": null,
+        "eventTitle": null,
+        "keyName": "Café ☕",
+        "keyColor": null,
+        "readOnly": false,
+        "extra": []
+      },
+      "reencoded": "{\"v\":1,\"uuid\":\"r7\",\"updated\":\"1970-01-01T00:00:00Z\",\"enabled\":true,\"match\":{\"type\":\"title_contains\",\"pattern\":\"Café\"},\"key\":{\"name\":\"Café ☕\"}}"
+    },
+    {
+      "input": "{\"v\":1,\"uuid\":\"r8\",\"match\":{\"type\":\"shoe_size\",\"pattern\":\"9\"}}",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "{\"v\":1,\"match\":{\"type\":\"all\",\"pattern\":\"\"}}",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "{\"v\":1.5,\"uuid\":\"r9\",\"match\":{\"type\":\"all\",\"pattern\":\"\"}}",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "{\"v\":\"1\",\"uuid\":\"r10\",\"match\":{\"type\":\"all\",\"pattern\":\"\"}}",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "not json",
+      "decoded": null,
+      "reencoded": null
+    },
+    {
+      "input": "[1,2,3]",
+      "decoded": null,
+      "reencoded": null
+    }
+  ]
 }
