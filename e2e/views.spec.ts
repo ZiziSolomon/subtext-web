@@ -23,7 +23,7 @@ test('week view shows contexts in the key and as untitled stripes', async ({ pag
 
 test('a stripe opens its context with the reason it is one', async ({ page }) => {
   await page.locator('.tg-stripe[title^="Shifts"]').first().click()
-  await expect(page.locator('dialog.details')).toContainText('title contains "shift"')
+  await expect(page.locator('dialog.details')).toContainText('title contains “shift”')
 })
 
 test('month view draws context bars and lists commitments', async ({ page }) => {

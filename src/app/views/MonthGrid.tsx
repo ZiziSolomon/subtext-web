@@ -16,6 +16,7 @@ interface Props {
   commitments: AppEvent[]
   stripes: Stripe[]
   contextById: Map<string, AppEvent>
+  highlight?: (event: AppEvent) => boolean
   onOpen: (event: AppEvent) => void
   onOpenDay: (day: Temporal.PlainDate) => void
 }
@@ -25,7 +26,7 @@ interface Props {
  * just under the date numbers at its true times, and a multi-day context is one bar through the
  * week. Commitments are listed in each day, as usual.
  */
-export function MonthGrid({ range, month, commitments, stripes, contextById, onOpen, onOpenDay }: Props) {
+export function MonthGrid({ range, month, commitments, stripes, contextById, highlight, onOpen, onOpenDay }: Props) {
   const days = Array.from({ length: range.days }, (_, i) => range.firstDay.add({ days: i }))
   const bars = useMemo(() => monthBars(stripes).filter((b) => b.lane < MAX_LANES), [stripes])
   const now = Temporal.Now.zonedDateTimeISO(zone)
@@ -74,7 +75,7 @@ export function MonthGrid({ range, month, commitments, stripes, contextById, onO
                     {list.slice(0, MAX_CHIPS).map((event) => (
                       <button
                         key={`${event.calendarId}/${event.id}`}
-                        className={`mg-chip${event.allDay ? ' is-allday' : ''}`}
+                        className={`mg-chip${event.allDay ? ' is-allday' : ''}${highlight?.(event) ? ' is-highlighted' : ''}`}
                         style={event.allDay ? { background: argbToCss(event.color), color: textOn(event.color) } : { ['--dot' as string]: argbToCss(event.color) }}
                         onClick={() => onOpen(event)}
                         title={event.title}
@@ -103,7 +104,7 @@ export function MonthGrid({ range, month, commitments, stripes, contextById, onO
                   return (
                     <div
                       key={i}
-                      className={`mg-context-bar${ended ? ' is-past' : ''}`}
+                      className={`mg-context-bar${ended ? ' is-past' : ''}${context && highlight?.(context) ? ' is-highlighted' : ''}`}
                       title={bar.title}
                       style={{
                         left: `${(bar.start / MINUTES_PER_ROW) * 100}%`,

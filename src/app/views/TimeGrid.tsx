@@ -15,11 +15,13 @@ interface Props {
   commitments: AppEvent[]
   stripes: Stripe[]
   contextById: Map<string, AppEvent>
+  /** While a rule is being edited: the events it would catch, to outline. */
+  highlight?: (event: AppEvent) => boolean
   onOpen: (event: AppEvent) => void
 }
 
 /** Day and week view: hours down the side, days across, contexts as tinted lanes behind the events. */
-export function TimeGrid({ range, commitments, stripes, contextById, onOpen }: Props) {
+export function TimeGrid({ range, commitments, stripes, contextById, highlight, onOpen }: Props) {
   const { firstDay, days } = range
   const blocks = useMemo(() => layoutTimedBlocks(commitments, firstDay, days, zone), [commitments, firstDay, days])
   const bars = useMemo(() => layoutAllDayBars(commitments, firstDay, days, zone), [commitments, firstDay, days])
@@ -52,7 +54,7 @@ export function TimeGrid({ range, commitments, stripes, contextById, onOpen }: P
           {bars.map((bar) => (
             <button
               key={`${bar.event.calendarId}/${bar.event.id}`}
-              className="tg-allday-bar event-chip"
+              className={`tg-allday-bar event-chip${highlight?.(bar.event as AppEvent) ? ' is-highlighted' : ''}`}
               style={{
                 left: `calc(${bar.firstDay * columnPercent}% + 2px)`,
                 width: `calc(${(bar.lastDay - bar.firstDay + 1) * columnPercent}% - 4px)`,
@@ -88,7 +90,7 @@ export function TimeGrid({ range, commitments, stripes, contextById, onOpen }: P
             return (
               <div
                 key={`s${i}`}
-                className="tg-stripe"
+                className={`tg-stripe${context && highlight?.(context) ? ' is-highlighted' : ''}`}
                 title={`${stripe.title}\n${minuteLabel(stripe.startMinute)} – ${minuteLabel(stripe.endMinute)}`}
                 style={{
                   left: `calc(${stripe.dayIndex * columnPercent + stripe.lane * lanePercent}% + 2px)`,
@@ -110,7 +112,7 @@ export function TimeGrid({ range, commitments, stripes, contextById, onOpen }: P
             return (
               <button
                 key={`${event.calendarId}/${event.id}/${block.dayIndex}`}
-                className={`tg-event event-chip${short ? ' is-short' : ''}`}
+                className={`tg-event event-chip${short ? ' is-short' : ''}${highlight?.(event) ? ' is-highlighted' : ''}`}
                 style={{
                   left: `calc(${block.dayIndex * columnPercent + block.lane * lanePercent}% + 4px)`,
                   width: `calc(${lanePercent}% - 8px)`,

@@ -1,27 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RuleEvaluator } from '../core/evaluator'
-import type { Rule } from '../core/types'
+import { describeRule } from '../core/ruleText'
+import type { CalEvent } from '../core/types'
 import { argbToCss, type AppEvent } from '../google/events'
+import type { StoredRule } from '../google/rulesCalendar'
 import { formatTime, zone } from './dates'
 
-function describeRule(rule: Rule): string {
-  switch (rule.type) {
-    case 'all':
-      return 'every event in this calendar'
-    case 'title_contains':
-      return `title contains "${rule.pattern}"`
-    case 'title_regex':
-      return `title matches /${rule.pattern}/`
-    case 'duration_over':
-      return `longer than ${Math.round(Number(rule.pattern) / 60)} hours`
-    case 'event':
-      return 'marked directly'
-  }
+/** What the details dialog can do with rules; absent until the rules have loaded. */
+export interface RuleActions {
+  markedBy: (event: CalEvent) => StoredRule | undefined
+  mark: (event: AppEvent) => Promise<boolean>
+  unmark: (stored: StoredRule) => Promise<void>
+  ruleFromTitle: (event: AppEvent) => void
 }
 
-/** Read-only details for now; editing arrives in phase 20. */
-export function EventDetails({ event, contextual, evaluator, onClose }: { event: AppEvent; contextual: boolean; evaluator: RuleEvaluator; onClose: () => void }) {
+/** Details, why it's a context, and the rule actions. Editing the event itself arrives in phase 20. */
+export function EventDetails({ event, contextual, evaluator, actions, onClose }: { event: AppEvent; contextual: boolean; evaluator: RuleEvaluator; actions?: RuleActions; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const [busy, setBusy] = useState(false)
   useEffect(() => {
     dialog.current?.showModal()
   }, [])
@@ -32,7 +28,15 @@ export function EventDetails({ event, contextual, evaluator, onClose }: { event:
       : `${event.startDate.toLocaleString(undefined, { day: 'numeric', month: 'short' })} – ${event.endDate.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
     : `${event.start.toZonedDateTimeISO(zone).toPlainDate().toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}, ${formatTime(event.start)} – ${formatTime(event.end)}`
 
-  const reasons = contextual ? evaluator.matchingRules(event).map(describeRule) : []
+  const reasons = contextual ? evaluator.matchingRules(event).map((rule) => (rule.type === 'event' ? 'marked directly' : describeRule(rule).toLowerCase())) : []
+  const mark = actions?.markedBy(event)
+
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true)
+    await action()
+    setBusy(false)
+    dialog.current?.close()
+  }
 
   return (
     <dialog ref={dialog} className="details" onClose={onClose} onClick={(e) => e.target === dialog.current && dialog.current?.close()}>
@@ -45,6 +49,30 @@ export function EventDetails({ event, contextual, evaluator, onClose }: { event:
         {event.google.location && <p className="muted">{event.google.location}</p>}
         <p className="muted">{event.calendar.summaryOverride ?? event.calendar.summary}</p>
         {contextual && <p className="context-reason">Context: {reasons.join('; ')}</p>}
+
+        {actions && (
+          <div className="details-rule-actions">
+            {mark ? (
+              <button disabled={busy} onClick={() => run(() => actions.unmark(mark))}>
+                Unmark as contextual
+              </button>
+            ) : (
+              <button disabled={busy} onClick={() => run(() => actions.mark(event))}>
+                Mark as contextual{event.seriesId ? ' (every occurrence)' : ''}
+              </button>
+            )}
+            <button
+              disabled={busy || !event.title}
+              onClick={() => {
+                actions.ruleFromTitle(event)
+                dialog.current?.close()
+              }}
+            >
+              Make a rule from this title
+            </button>
+          </div>
+        )}
+
         <div className="details-actions">
           {event.google.htmlLink && (
             <a href={event.google.htmlLink} target="_blank" rel="noreferrer">

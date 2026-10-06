@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { requestAccessToken } from '../google/auth'
 import { listCalendars, type CalendarListEntry } from '../google/calendarApi'
 import { listEvents, SignedOutError, type AppEvent } from '../google/events'
+import { RULES_CALENDAR_NAME } from '../google/rulesCalendar'
 import { mergeCalendars, primaryEmail, type Account, type AccountCalendar } from './accounts'
 import { rangeToInstants, type VisibleRange } from './dates'
 import { demoCalendars, demoEvents } from './demo'
@@ -39,6 +40,10 @@ export interface CalendarData {
   renewAccount: (email: string) => Promise<void>
   removeAccount: (email: string) => void
   calendars: AccountCalendar[]
+  /** The shared "Subtext rules" calendar, if a signed-in account owns one (kept out of [calendars]). */
+  rulesCalendar: AccountCalendar | undefined
+  /** Re-reads an account's calendar list, e.g. after creating the rules calendar in it. */
+  reloadCalendars: (email: string) => Promise<void>
   hiddenCalendars: string[]
   toggleCalendar: (id: string) => void
   events: AppEvent[]
@@ -99,11 +104,24 @@ export function useCalendarData(range: VisibleRange): CalendarData {
     }
   }, [accounts, listsByAccount, dropToken])
 
-  const calendars = useMemo<AccountCalendar[]>(() => {
+  const allCalendars = useMemo<AccountCalendar[]>(() => {
     if (isDemo) return demoCalendars.map((c) => ({ ...c, account: 'demo' }))
     // keep the order accounts were added in
     return mergeCalendars(known.filter((email) => listsByAccount[email]).map((email) => ({ account: email, calendars: listsByAccount[email] })))
   }, [known, listsByAccount])
+  const isRulesCalendar = (c: AccountCalendar) => c.summary === RULES_CALENDAR_NAME && c.accessRole === 'owner'
+  const calendars = useMemo(() => allCalendars.filter((c) => !isRulesCalendar(c)), [allCalendars])
+  const rulesCalendar = useMemo(() => allCalendars.find(isRulesCalendar), [allCalendars])
+
+  const reloadCalendars = useCallback(
+    async (email: string) => {
+      const account = accounts.find((a) => a.email === email)
+      if (!account) return
+      const calendars = await listCalendars(account.token)
+      setListsByAccount((lists) => ({ ...lists, [email]: calendars }))
+    },
+    [accounts],
+  )
 
   const visible = useMemo(() => calendars.filter((c) => !hiddenCalendars.includes(c.id)), [calendars, hiddenCalendars])
   const rangeKey = `${range.firstDay}+${range.days}`
@@ -166,6 +184,8 @@ export function useCalendarData(range: VisibleRange): CalendarData {
     renewAccount: (email) => signInAs(email),
     removeAccount,
     calendars,
+    rulesCalendar,
+    reloadCalendars,
     hiddenCalendars,
     toggleCalendar,
     events,
